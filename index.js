@@ -5,6 +5,7 @@ const cors = require('cors');
 const { kanji } = require('./src/data/kanji/kanji');
 const { vocab } = require('./src/data/vocab/vocab');
 const { hiragana, katakana } = require('./src/data/kana/kana');
+const { lessons } = require('./src/data/lessons/lessons');
 const { shuffleArray } = require('./src/services/shuffle-array');
 const { getOptions } = require('./src/services/get-options');
 
@@ -40,7 +41,7 @@ app.get('/', (req, res) => {
   use  /vocab           to get all vocab
   ?jlpt                 to get word by jlpt level (1-5)
   ?word                 to get a specific word
-  ?kanji                to get all vocab that includes the kanji
+  ?kanji                to get all vocab that includes the kanji (comma-separated list is supported)
   ?kanjiJlpt            to get vocab by kanji Jlpt level (1-5)
   ?limit                to set the amount of items
   ?random               to randomize the result (true, false)
@@ -53,7 +54,23 @@ app.get('/', (req, res) => {
   use  /search/:query   to get an object of search results for the :query value
 
   /-------------------------------------------------------------------------------/
+
+  use  /lessons          to get all lessons grouped by level (n5-n1)
+
+  /-------------------------------------------------------------------------------/
   `);
+});
+
+app.get('/lessons', (req, res) => {
+  try {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.writeHead(200);
+    res.end(JSON.stringify(lessons));
+  } catch (error) {
+    res.writeHead(404);
+    res.end(error.message);
+  }
 });
 
 app.get('/kanji', (req, res) => {
@@ -137,7 +154,13 @@ app.get('/vocab', (req, res) => {
       }
 
       if (req.query.kanji) {
-        content = content.filter(item => item.kanji.includes(req.query.kanji));
+        const kanjiList = req.query.kanji
+          .split(',')
+          .map(k => k.trim())
+          .filter(Boolean);
+        content = content.filter(item =>
+          kanjiList.some(k => item.kanji.includes(k))
+        );
       }
 
       if (req.query.limit && isFinite(Number(req.query.limit)) && Number(req.query.limit) > 0) {
