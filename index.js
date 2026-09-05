@@ -1,19 +1,21 @@
 // external modules
 
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
-const { kanji } = require('./src/data/kanji/kanji');
-const { vocab } = require('./src/data/vocab/vocab');
-const { hiragana, katakana } = require('./src/data/kana/kana');
-const { lessons } = require('./src/data/lessons/lessons');
-const { shuffleArray } = require('./src/services/shuffle-array');
-const { getOptions } = require('./src/services/get-options');
+
+// project modules
+
+const kanjiRouter = require('./src/routes/kanji');
+const vocabRouter = require('./src/routes/vocab');
+const searchRouter = require('./src/routes/search');
+const lessonsRouter = require('./src/routes/lessons');
 
 // app variables
 
 const app = express();
 const port = 4000;
-
 
 // app configuration
 
@@ -61,193 +63,17 @@ app.get('/', (req, res) => {
   `);
 });
 
-app.get('/lessons', (req, res) => {
-  try {
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.writeHead(200);
-    res.end(JSON.stringify(lessons));
-  } catch (error) {
-    res.writeHead(404);
-    res.end(error.message);
-  }
-});
-
-app.get('/kanji', (req, res) => {
-  try {
-    let content = [...kanji];
-
-    if (req.query) {
-
-      if (req.query.kanji) {
-        content = [];
-        for (let item of req.query.kanji) {
-          content.push(...kanji.filter(k => k.kanji === item));
-        }
-      }
-
-      if (req.query.random && req.query.random === 'true') {
-        content = shuffleArray(content);
-      }
-
-      if (req.query.jlpt && isFinite(Number(req.query.jlpt)) && Number(req.query.jlpt) > 0)
-        content = content.filter(item => item.jlpt >= Number(req.query.jlpt));
-
-      if (req.query.limit && isFinite(Number(req.query.limit)) && Number(req.query.limit) > 0) {
-        content = content.slice(0, Number(req.query.limit));
-      }
-
-    }
-
-    if (content.length === 1) content = content[0];
-    if (content.length === 0) throw new Error('Not found');
-
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.writeHead(200);
-    res.end(JSON.stringify(content));
-  } catch (error) {
-    res.writeHead(404);
-    res.end(error.message);
-  }
-});
-
-app.get('/kanji/:id', (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    const content = kanji.filter(item => item.id === id)[0];
-
-    if (!content) throw new Error('Not found');
-
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.writeHead(200);
-    res.end(JSON.stringify(content));
-  } catch (error) {
-    res.writeHead(404);
-    res.end(error.message);
-  }
-});
-
-app.get('/vocab', (req, res) => {
-  try {
-    let content = [...vocab];
-
-    if (req.query) {
-
-      if (req.query.random && req.query.random === 'true') {
-        content = shuffleArray(content);
-      }
-
-      if (req.query.jlpt && isFinite(Number(req.query.jlpt)) && Number(req.query.jlpt) > 0) {
-        content = content.filter(item => item.jlpt >= Number(req.query.jlpt));
-      }
-
-      if (req.query.kanjiJlpt && isFinite(Number(req.query.kanjiJlpt)) && Number(req.query.kanjiJlpt) > 0) {
-        const kana = [...hiragana.map(item => item.kana), ...katakana.map(item => item.kana)];
-        const kanjiByJlpt = kanji.filter(item => item.jlpt >= req.query.kanjiJlpt).map(item => item.kanji).concat(kana);
-        content = content.filter(item => item.kanji.split('').every(kana => kanjiByJlpt.includes(kana)));
-      }
-
-      if (req.query.word) {
-        content = content.filter(item => item.kanji === req.query.word);
-      }
-
-      if (req.query.kanji) {
-        const kanjiList = req.query.kanji
-          .split(',')
-          .map(k => k.trim())
-          .filter(Boolean);
-        content = content.filter(item =>
-          kanjiList.some(k => item.kanji.includes(k))
-        );
-      }
-
-      if (req.query.limit && isFinite(Number(req.query.limit)) && Number(req.query.limit) > 0) {
-        content = content.slice(0, Number(req.query.limit));
-      }
-
-      if (req.query.options && isFinite(Number(req.query.options)) && Number(req.query.options) > 1) {
-        content = getOptions(content, req.query.options);
-      }
-
-    }
-
-    if (content.length === 1) content = content[0];
-    if (content.length === 0) throw new Error('Not found');
-
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.writeHead(200);
-    res.end(JSON.stringify(content));
-  } catch (error) {
-    res.writeHead(404);
-    res.end(error.message);
-  }
-});
-
-app.get('/vocab/:id', (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    const content = vocab.filter(item => item.id === id)[0];
-
-    if (!content) throw new Error('Not found');
-
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.writeHead(200);
-    res.end(JSON.stringify(content));
-  } catch (error) {
-    res.writeHead(404);
-    res.end(error.message);
-  }
-});
-
-app.get('/search/:query', (req, res) => {
-  try {
-    const query = req.params.query;
-
-    const search = query.toLowerCase();
-    const regex = /[()\.\s]/g;
-
-    const kanjiResult = [...kanji].filter(item =>
-      item.kanji.includes(search) ||
-      item.kun.replace(regex, '').includes(search) ||
-      item.on.replace(regex, '').includes(search) ||
-      item.meaning.toLowerCase().includes(search) ||
-      item.romajiKun.toLowerCase().replace(regex, '').includes(search) ||
-      item.romajiOn.toLowerCase().replace(regex, '').includes(search)
-    ).map(kanji => ({
-      ...kanji,
-      ref: vocab.filter(item => item.kanji.includes(kanji.kanji))
-    }));
-
-    const vocabResult = [...vocab].filter(item =>
-      item.kanji.includes(search) ||
-      item.kana.replace(regex, '').includes(search) ||
-      item.meaning.toLowerCase().includes(search) ||
-      item.romaji.toLowerCase().includes(search)
-    );
-
-    const content = {};
-    kanjiResult.length > 0 && (content.kanji = kanjiResult);
-    vocabResult.length > 0 && (content.vocab = vocabResult);
-
-    if (!content.kanji && !content.vocab) throw new Error('Not found');
-
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.writeHead(200);
-    res.end(JSON.stringify(content));
-  } catch (error) {
-    res.writeHead(404);
-    res.end(error.message);
-  }
-});
-
+app.use('/lessons', lessonsRouter);
+app.use('/kanji', kanjiRouter);
+app.use('/vocab', vocabRouter);
+app.use('/search', searchRouter);
 
 // server activation
 
-app.listen(port, () => {
-  console.log(`Listening on port ${port}`);
-});
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`Listening on port ${port}`);
+  });
+}
+
+module.exports = app;
