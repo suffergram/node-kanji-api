@@ -1,21 +1,24 @@
 {
-  "name": "kanji-api",
-  "version": "1.0.0",
+  "name": "node-kanji-api",
+  "version": "0.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node --watch index.js"
+    "dev": "node --watch index.js",
+    "migrate": "node-pg-migrate -d DATABASE_URL_UNPOOLED"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
-    "express": "^4.18.2",
+    "express": "^5.2.1",
     "pg": "^8.23.0"
   },
   "devDependencies": {
+    "node-pg-migrate": "^9.0.0",
     "prettier": "^3.2.5"
   }
 }

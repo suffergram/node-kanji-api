@@ -28,7 +28,7 @@ npm install
 ## Запуск локально
 
 ```bash
-npm start
+npm dev
 ```
 
 Сервер стартует на `http://localhost:4000`.

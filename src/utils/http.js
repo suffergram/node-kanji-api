@@ -1,11 +1,10 @@
+const { HttpError } = require('./http-error');
+
 function send(res, content) {
   if (content.length === 1) content = content[0];
-  if (content.length === 0) throw new Error('Not found');
+  if (content.length === 0) throw new HttpError(404, 'Not Found');
 
-  res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.writeHead(200);
-  res.end(JSON.stringify(content));
+  res.json(content);
 }
 
 module.exports = { send };

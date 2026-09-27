@@ -4,6 +4,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 
 // project modules
 
@@ -11,6 +12,7 @@ const kanjiRouter = require('./src/routes/kanji');
 const vocabRouter = require('./src/routes/vocab');
 const searchRouter = require('./src/routes/search');
 const lessonsRouter = require('./src/routes/lessons');
+const { HttpError } = require('./src/utils/http-error');
 
 // app variables
 
@@ -20,6 +22,8 @@ const port = 4000;
 // app configuration
 
 app.use(cors());
+app.use(express.json());
+app.use(cookieParser());
 
 // routes definitions
 
@@ -67,6 +71,20 @@ app.use('/lessons', lessonsRouter);
 app.use('/kanji', kanjiRouter);
 app.use('/vocab', vocabRouter);
 app.use('/search', searchRouter);
+
+app.use(() => {
+  throw new HttpError(404, 'Not Found');
+});
+
+app.use((err, req, res, next) => {
+  if (err instanceof HttpError) {
+    const { status, message } = err;
+    res.status(status).json({ error: message });
+    return;
+  }
+  console.error(err);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
 
 // server activation
 
