@@ -1,6 +1,7 @@
 const express = require('express');
 
 const { getPool } = require('../db');
+const { send } = require('../utils/http');
 
 const router = express.Router();
 
@@ -21,10 +22,7 @@ router.get('/', async (req, res) => {
     });
   }
 
-  res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.writeHead(200);
-  res.end(JSON.stringify(content));
+  send(res, content);
 });
 
 module.exports = router;
