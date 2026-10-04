@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const { HttpError } = require('../utils/http-error');
 const { getPool } = require('../db');
 const { createSession } = require('../services/sessions');
+const { requireAuth } = require('../middleware/require-auth');
 
 const router = express.Router();
 
@@ -87,6 +88,10 @@ router.post('/login', async (req, res) => {
 
   res.cookie('sid', session.id, getCookieOptions(session));
   res.json({ id: user.id, email });
+});
+
+router.get('/me', requireAuth, (req, res) => {
+  res.json(req.user);
 });
 
 module.exports = router;
