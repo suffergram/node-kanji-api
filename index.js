@@ -8,6 +8,7 @@ const cookieParser = require('cookie-parser');
 
 // project modules
 
+const authRouter = require('./src/routes/auth');
 const kanjiRouter = require('./src/routes/kanji');
 const vocabRouter = require('./src/routes/vocab');
 const searchRouter = require('./src/routes/search');
@@ -67,6 +68,7 @@ app.get('/', (req, res) => {
   `);
 });
 
+app.use('/auth', authRouter);
 app.use('/lessons', lessonsRouter);
 app.use('/kanji', kanjiRouter);
 app.use('/vocab', vocabRouter);
@@ -80,6 +82,10 @@ app.use((err, req, res, next) => {
   if (err instanceof HttpError) {
     const { status, message } = err;
     res.status(status).json({ error: message });
+    return;
+  }
+  if (err.type === 'entity.parse.failed') {
+    res.status(400).json({ error: 'Invalid JSON' });
     return;
   }
   console.error(err);
