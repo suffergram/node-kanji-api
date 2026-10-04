@@ -26,7 +26,16 @@ async function getSessionUser(sessionId) {
   return rows[0] ?? null;
 }
 
+async function deleteSession(sessionId) {
+  const pool = getPool();
+
+  const sql = 'DELETE FROM sessions WHERE id = $1';
+
+  await pool.query(sql, [sessionId]);
+}
+
 module.exports = {
   createSession,
   getSessionUser,
+  deleteSession,
 };

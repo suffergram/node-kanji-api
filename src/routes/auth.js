@@ -4,18 +4,23 @@ const bcrypt = require('bcryptjs');
 
 const { HttpError } = require('../utils/http-error');
 const { getPool } = require('../db');
-const { createSession } = require('../services/sessions');
+const { createSession, deleteSession } = require('../services/sessions');
 const { requireAuth } = require('../middleware/require-auth');
 
 const router = express.Router();
 
-const getCookieOptions = (session) => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax',
-  path: '/',
-  expires: session.expiresAt,
-});
+const getCookieOptions = (session) => {
+  const options = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+  };
+  if (session) {
+    options.expires = session.expiresAt;
+  }
+  return options;
+};
 
 const registerSchema = z.object({
   email: z.email(),
@@ -92,6 +97,17 @@ router.post('/login', async (req, res) => {
 
 router.get('/me', requireAuth, (req, res) => {
   res.json(req.user);
+});
+
+router.post('/logout', async (req, res) => {
+  const { cookies } = req;
+
+  if (cookies.sid) {
+    await deleteSession(cookies.sid);
+  }
+
+  res.clearCookie('sid', getCookieOptions());
+  res.status(204).end();
 });
 
 module.exports = router;

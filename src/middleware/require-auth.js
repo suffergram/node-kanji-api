@@ -2,7 +2,7 @@ const { getSessionUser } = require('../services/sessions');
 const { HttpError } = require('../utils/http-error');
 
 async function requireAuth(req, res, next) {
-  const cookies = req.cookies;
+  const { cookies } = req;
 
   if (!cookies.sid) {
     throw new HttpError(401, 'Unauthorized');
