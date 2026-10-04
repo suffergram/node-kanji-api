@@ -6,6 +6,7 @@ const { HttpError } = require('../utils/http-error');
 const { getPool } = require('../db');
 const { createSession, deleteSession } = require('../services/sessions');
 const { requireAuth } = require('../middleware/require-auth');
+const { loginLimit, registerLimit } = require('../middleware/auth-limit');
 
 const router = express.Router();
 
@@ -32,7 +33,7 @@ const loginSchema = z.object({
   password: z.string().nonempty().max(72),
 });
 
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimit, async (req, res) => {
   const pool = getPool();
 
   const parsed = registerSchema.safeParse(req.body);
@@ -61,7 +62,7 @@ router.post('/register', async (req, res) => {
   res.status(201).json({ id: user.id, email });
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimit, async (req, res) => {
   const pool = getPool();
 
   const parsed = loginSchema.safeParse(req.body);
