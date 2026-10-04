@@ -26,6 +26,18 @@ app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
+// TODO: remove after configuring 'trust proxy'
+app.use('/auth', (req, res, next) => {
+  console.log('[ip-debug]', JSON.stringify({
+    ip: req.ip,
+    remoteAddress: req.socket.remoteAddress,
+    xForwardedFor: req.headers['x-forwarded-for'],
+    xRealIp: req.headers['x-real-ip'],
+    xVercelForwardedFor: req.headers['x-vercel-forwarded-for'],
+  }));
+  next();
+});
+
 // routes definitions
 
 app.get('/', (req, res) => {
