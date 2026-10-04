@@ -22,21 +22,13 @@ const port = 4000;
 
 // app configuration
 
+// Vercel puts one proxy in front of the app and overwrites X-Forwarded-For
+// with the client IP, so trusting exactly one hop gives the real req.ip
+app.set('trust proxy', 1);
+
 app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
-
-// TODO: remove after configuring 'trust proxy'
-app.use('/auth', (req, res, next) => {
-  console.log('[ip-debug]', JSON.stringify({
-    ip: req.ip,
-    remoteAddress: req.socket.remoteAddress,
-    xForwardedFor: req.headers['x-forwarded-for'],
-    xRealIp: req.headers['x-real-ip'],
-    xVercelForwardedFor: req.headers['x-vercel-forwarded-for'],
-  }));
-  next();
-});
 
 // routes definitions
 
