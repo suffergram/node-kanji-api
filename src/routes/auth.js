@@ -7,6 +7,7 @@ const { getPool } = require('../db');
 const { createSession, deleteSession } = require('../services/sessions');
 const { requireAuth } = require('../middleware/require-auth');
 const { loginLimit, registerLimit } = require('../middleware/auth-limit');
+const { toPublicUser } = require('../utils/user');
 
 const router = express.Router();
 
@@ -26,6 +27,7 @@ const getCookieOptions = (session) => {
 const registerSchema = z.object({
   email: z.email(),
   password: z.string().min(8).max(72),
+  displayName: z.string().trim().min(1).max(32).optional(),
 });
 
 const loginSchema = z.object({
@@ -44,10 +46,14 @@ router.post('/register', registerLimit, async (req, res) => {
   const email = parsed.data.email.toLowerCase();
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
 
-  const sql = `INSERT INTO users(email, password_hash) VALUES ($1,$2) RETURNING id`;
+  const sql = `INSERT INTO users(email, password_hash, display_name) VALUES ($1,$2,$3) RETURNING id, email, display_name`;
   let user;
   try {
-    const { rows } = await pool.query(sql, [email, passwordHash]);
+    const { rows } = await pool.query(sql, [
+      email,
+      passwordHash,
+      parsed.data.displayName ?? null,
+    ]);
     user = rows[0];
   } catch (error) {
     if (error.code === '23505') {
@@ -59,7 +65,7 @@ router.post('/register', registerLimit, async (req, res) => {
   const session = await createSession(user.id);
 
   res.cookie('sid', session.id, getCookieOptions(session));
-  res.status(201).json({ id: user.id, email });
+  res.status(201).json(toPublicUser(user));
 });
 
 router.post('/login', loginLimit, async (req, res) => {
@@ -72,7 +78,8 @@ router.post('/login', loginLimit, async (req, res) => {
 
   const email = parsed.data.email.toLowerCase();
 
-  const sql = 'SELECT id, email, password_hash FROM users WHERE email = $1';
+  const sql =
+    'SELECT id, email, password_hash, display_name FROM users WHERE email = $1';
 
   const { rows } = await pool.query(sql, [email]);
   const user = rows[0];
@@ -93,7 +100,7 @@ router.post('/login', loginLimit, async (req, res) => {
   const session = await createSession(user.id);
 
   res.cookie('sid', session.id, getCookieOptions(session));
-  res.json({ id: user.id, email });
+  res.json(toPublicUser(user));
 });
 
 router.get('/me', requireAuth, (req, res) => {
