@@ -9,6 +9,7 @@ const cookieParser = require('cookie-parser');
 // project modules
 
 const authRouter = require('./src/routes/auth');
+const usersRouter = require('./src/routes/users');
 const kanjiRouter = require('./src/routes/kanji');
 const vocabRouter = require('./src/routes/vocab');
 const searchRouter = require('./src/routes/search');
@@ -73,6 +74,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/auth', authRouter);
+app.use('/users', usersRouter);
 app.use('/lessons', lessonsRouter);
 app.use('/kanji', kanjiRouter);
 app.use('/vocab', vocabRouter);

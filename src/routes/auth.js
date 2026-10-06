@@ -7,6 +7,8 @@ const { getPool } = require('../db');
 const { createSession, deleteSession } = require('../services/sessions');
 const { requireAuth } = require('../middleware/require-auth');
 const { loginLimit, registerLimit } = require('../middleware/auth-limit');
+const { toPublicUser } = require('../utils/user');
+const { validate } = require('../utils/validate');
 
 const router = express.Router();
 
@@ -24,30 +26,43 @@ const getCookieOptions = (session) => {
 };
 
 const registerSchema = z.object({
-  email: z.email(),
-  password: z.string().min(8).max(72),
+  email: z.email({ error: 'Invalid email address format' }),
+  password: z
+    .string()
+    .min(8, { error: 'Password must be at least 8 characters' })
+    .max(72, { error: 'Password cannot exceed 72 characters' }),
+  displayName: z
+    .string({ error: 'Nickname must be a string or null' })
+    .trim()
+    .min(1, { error: 'Nickname cannot be empty' })
+    .max(32, { error: 'Nickname must be at most 32 characters' })
+    .optional()
+    .nullable(),
 });
 
 const loginSchema = z.object({
-  email: z.email(),
-  password: z.string().nonempty().max(72),
+  email: z.email({ error: 'Invalid email or password' }),
+  password: z
+    .string({ error: 'Invalid email or password' })
+    .nonempty({ error: 'Invalid email or password' })
+    .max(72, { error: 'Invalid email or password' }),
 });
 
 router.post('/register', registerLimit, async (req, res) => {
   const pool = getPool();
 
-  const parsed = registerSchema.safeParse(req.body);
-  if (!parsed.success) {
-    throw new HttpError(400, 'Invalid email or password');
-  }
+  const { email, password, displayName } = validate(registerSchema, req.body);
 
-  const email = parsed.data.email.toLowerCase();
-  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+  const passwordHash = await bcrypt.hash(password, 12);
 
-  const sql = `INSERT INTO users(email, password_hash) VALUES ($1,$2) RETURNING id`;
+  const sql = `INSERT INTO users(email, password_hash, display_name) VALUES ($1,$2,$3) RETURNING id, email, display_name`;
   let user;
   try {
-    const { rows } = await pool.query(sql, [email, passwordHash]);
+    const { rows } = await pool.query(sql, [
+      email.toLowerCase(),
+      passwordHash,
+      displayName ?? null,
+    ]);
     user = rows[0];
   } catch (error) {
     if (error.code === '23505') {
@@ -59,22 +74,18 @@ router.post('/register', registerLimit, async (req, res) => {
   const session = await createSession(user.id);
 
   res.cookie('sid', session.id, getCookieOptions(session));
-  res.status(201).json({ id: user.id, email });
+  res.status(201).json(toPublicUser(user));
 });
 
 router.post('/login', loginLimit, async (req, res) => {
   const pool = getPool();
 
-  const parsed = loginSchema.safeParse(req.body);
-  if (!parsed.success) {
-    throw new HttpError(400, 'Invalid email or password');
-  }
+  const { email, password } = validate(loginSchema, req.body);
 
-  const email = parsed.data.email.toLowerCase();
+  const sql =
+    'SELECT id, email, password_hash, display_name FROM users WHERE email = $1';
 
-  const sql = 'SELECT id, email, password_hash FROM users WHERE email = $1';
-
-  const { rows } = await pool.query(sql, [email]);
+  const { rows } = await pool.query(sql, [email.toLowerCase()]);
   const user = rows[0];
 
   if (!user) {
@@ -82,7 +93,7 @@ router.post('/login', loginLimit, async (req, res) => {
   }
 
   const passwordValidation = await bcrypt.compare(
-    parsed.data.password,
+    password,
     user['password_hash']
   );
 
@@ -93,7 +104,7 @@ router.post('/login', loginLimit, async (req, res) => {
   const session = await createSession(user.id);
 
   res.cookie('sid', session.id, getCookieOptions(session));
-  res.json({ id: user.id, email });
+  res.json(toPublicUser(user));
 });
 
 router.get('/me', requireAuth, (req, res) => {

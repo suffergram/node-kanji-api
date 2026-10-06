@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 
 const { getPool } = require('../db');
+const { toPublicUser } = require('../utils/user');
 
 async function createSession(userId) {
   const pool = getPool();
@@ -19,11 +20,11 @@ async function getSessionUser(sessionId) {
   const pool = getPool();
 
   const sql =
-    'SELECT users.id, users.email FROM users JOIN sessions ON users.id = sessions.user_id WHERE sessions.id = $1 AND expires_at > now()';
+    'SELECT users.id, users.email, users.display_name FROM users JOIN sessions ON users.id = sessions.user_id WHERE sessions.id = $1 AND expires_at > now()';
 
   const { rows } = await pool.query(sql, [sessionId]);
-
-  return rows[0] ?? null;
+  const user = rows[0];
+  return user ? toPublicUser(user) : null;
 }
 
 async function deleteSession(sessionId) {
