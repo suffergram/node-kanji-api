@@ -1,12 +1,8 @@
-// external modules
-
-const { Pool } = require('pg');
-
-// app variables
+import { Pool } from 'pg';
 
 let pool;
 
-function getPool() {
+export function getPool() {
   if (!pool) {
     if (!process.env.DATABASE_URL) {
       throw new Error(
@@ -26,5 +22,3 @@ function getPool() {
 
   return pool;
 }
-
-module.exports = { getPool };

@@ -1,12 +1,12 @@
-const crypto = require('node:crypto');
+import { randomBytes } from 'node:crypto';
 
-const { getPool } = require('../db');
-const { toPublicUser } = require('../utils/user');
+import { getPool } from '../db.js';
+import { toPublicUser } from '../utils/user.js';
 
-async function createSession(userId) {
+export async function createSession(userId) {
   const pool = getPool();
 
-  const id = crypto.randomBytes(32).toString('base64url');
+  const id = randomBytes(32).toString('base64url');
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
   const sql = 'INSERT INTO sessions(id, user_id, expires_at) VALUES($1,$2,$3)';
@@ -16,7 +16,7 @@ async function createSession(userId) {
   return { id, expiresAt };
 }
 
-async function getSessionUser(sessionId) {
+export async function getSessionUser(sessionId) {
   const pool = getPool();
 
   const sql =
@@ -27,7 +27,7 @@ async function getSessionUser(sessionId) {
   return user ? toPublicUser(user) : null;
 }
 
-async function deleteSession(sessionId) {
+export async function deleteSession(sessionId) {
   const pool = getPool();
 
   const sql = 'DELETE FROM sessions WHERE id = $1';
@@ -35,17 +35,10 @@ async function deleteSession(sessionId) {
   await pool.query(sql, [sessionId]);
 }
 
-async function deleteOtherSessions(userId, sessionId) {
+export async function deleteOtherSessions(userId, sessionId) {
   const pool = getPool();
 
   const sql = 'DELETE FROM sessions WHERE user_id = $1 AND id <> $2';
 
   await pool.query(sql, [userId, sessionId]);
 }
-
-module.exports = {
-  createSession,
-  getSessionUser,
-  deleteSession,
-  deleteOtherSessions,
-};

@@ -1,11 +1,11 @@
-const express = require('express');
+import { Router } from 'express';
 
-const { getPool } = require('../db');
-const { send } = require('../utils/http');
+import { getPool } from '../db.js';
+import { send } from '../utils/http.js';
 
-const router = express.Router();
+export const lessonsRouter = Router();
 
-router.get('/', async (req, res) => {
+lessonsRouter.get('/', async (req, res) => {
   const pool = getPool();
   const result = await pool.query(
     'SELECT level, id, description, data FROM lessons ORDER BY level, id'
@@ -24,5 +24,3 @@ router.get('/', async (req, res) => {
 
   send(res, content);
 });
-
-module.exports = router;

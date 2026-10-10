@@ -1,14 +1,14 @@
-const express = require('express');
+import { Router } from 'express';
 
-const { getPool } = require('../db');
-const { KANJI_SELECT, VOCAB_SELECT } = require('../utils/query');
-const { send } = require('../utils/http');
+import { getPool } from '../db.js';
+import { KANJI_SELECT, VOCAB_SELECT } from '../utils/query.js';
+import { send } from '../utils/http.js';
 
-const router = express.Router();
+export const searchRouter = Router();
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
-router.get('/:query', async (req, res) => {
+searchRouter.get('/:query', async (req, res) => {
   const pool = getPool();
   const pattern = `%${String(req.params.query).toLowerCase()}%`;
 
@@ -78,5 +78,3 @@ router.get('/:query', async (req, res) => {
 
   send(res, [content]);
 });
-
-module.exports = router;
