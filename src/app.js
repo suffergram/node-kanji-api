@@ -18,7 +18,7 @@ import { HttpError } from './utils/http-error.js';
 
 // app variables
 
-export const app = express();
+const app = express();
 
 // app configuration
 
@@ -96,3 +96,5 @@ app.use((err, req, res, next) => {
   console.error(err);
   res.status(500).json({ error: 'Internal Server Error' });
 });
+
+export default app;
