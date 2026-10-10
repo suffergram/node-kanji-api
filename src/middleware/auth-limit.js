@@ -19,7 +19,7 @@ const loginLimit = rateLimit({
   skipSuccessfulRequests: true,
 });
 
-const changePasswordLimit = rateLimit({
+const sensitiveLimit = rateLimit({
   ...baseOptions,
   limit: 10,
   skipSuccessfulRequests: true,
@@ -28,5 +28,5 @@ const changePasswordLimit = rateLimit({
 module.exports = {
   registerLimit,
   loginLimit,
-  changePasswordLimit,
+  sensitiveLimit,
 };
