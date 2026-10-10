@@ -1,4 +1,4 @@
-const { rateLimit } = require('express-rate-limit');
+import { rateLimit } from 'express-rate-limit';
 
 const baseOptions = {
   windowMs: 15 * 60 * 1000,
@@ -8,25 +8,21 @@ const baseOptions = {
   validate: { forwardedHeader: false },
 };
 
-const registerLimit = rateLimit({
+export const registerLimit = rateLimit({
   ...baseOptions,
   limit: 5,
 });
 
-const loginLimit = rateLimit({
+export const loginLimit = rateLimit({
   ...baseOptions,
   limit: 10,
   skipSuccessfulRequests: true,
 });
 
-const sensitiveLimit = rateLimit({
+export const sensitiveLimit = rateLimit({
   ...baseOptions,
   limit: 10,
   skipSuccessfulRequests: true,
 });
 
-module.exports = {
-  registerLimit,
-  loginLimit,
-  sensitiveLimit,
-};
+

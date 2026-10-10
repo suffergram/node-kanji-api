@@ -1,7 +1,7 @@
-const { getSessionUser } = require('../services/sessions');
-const { HttpError } = require('../utils/http-error');
+import { getSessionUser } from '../services/sessions.js';
+import { HttpError } from '../utils/http-error.js';
 
-async function requireAuth(req, res, next) {
+export async function requireAuth(req, res, next) {
   const { cookies } = req;
 
   if (!cookies.sid) {
@@ -17,7 +17,3 @@ async function requireAuth(req, res, next) {
   req.user = user;
   next();
 }
-
-module.exports = {
-  requireAuth,
-};

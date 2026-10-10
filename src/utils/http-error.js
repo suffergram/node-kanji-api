@@ -1,4 +1,4 @@
-class HttpError extends Error {
+export class HttpError extends Error {
   /**
    * @type number
    */
@@ -15,7 +15,3 @@ class HttpError extends Error {
     this.status = status;
   }
 }
-
-module.exports = {
-  HttpError,
-};

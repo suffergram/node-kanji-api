@@ -1,55 +1,50 @@
-const express = require('express');
-const z = require('zod');
-const bcrypt = require('bcryptjs');
+import { Router } from 'express';
+import { object, string, email as _email } from 'zod';
+import { hash } from 'bcryptjs';
 
-const { getPool } = require('../db');
-const { toPublicUser } = require('../utils/user');
-const { requireAuth } = require('../middleware/require-auth');
-const { validate } = require('../utils/validate');
-const { HttpError } = require('../utils/http-error');
-const { deleteOtherSessions } = require('../services/sessions');
-const { sensitiveLimit } = require('../middleware/auth-limit');
-const { verifyPassword } = require('../utils/verify-password');
-const { getCookieOptions } = require('../utils/cookies');
+import { getPool } from '../db.js';
+import { toPublicUser } from '../utils/user.js';
+import { requireAuth } from '../middleware/require-auth.js';
+import { validate } from '../utils/validate.js';
+import { HttpError } from '../utils/http-error.js';
+import { deleteOtherSessions } from '../services/sessions.js';
+import { sensitiveLimit } from '../middleware/auth-limit.js';
+import { verifyPassword } from '../utils/verify-password.js';
+import { getCookieOptions } from '../utils/cookies.js';
 
-const router = express.Router();
+export const usersRouter = Router();
 
-const profileSchema = z.object({
-  displayName: z
-    .string({ error: 'Nickname must be a string' })
+const profileSchema = object({
+  displayName: string({ error: 'Nickname must be a string' })
     .trim()
     .min(1, { error: 'Nickname cannot be empty' })
     .max(32, { error: 'Nickname must be at most 32 characters' })
     .nullable(),
 });
 
-const passwordSchema = z.object({
-  currentPassword: z
-    .string({ error: 'Password is required' })
+const passwordSchema = object({
+  currentPassword: string({ error: 'Password is required' })
     .max(72, { error: 'Password must be at most 72 characters' })
     .nonempty(),
-  newPassword: z
-    .string({ error: 'Password is required' })
+  newPassword: string({ error: 'Password is required' })
     .min(8, { error: 'Password must be at least 8 characters' })
     .max(72, { error: 'Password must be at most 72 characters' }),
 });
 
-const emailSchema = z.object({
-  email: z.email({ error: 'Enter a valid email address' }),
-  currentPassword: z
-    .string({ error: 'Password is required' })
+const emailSchema = object({
+  email: _email({ error: 'Enter a valid email address' }),
+  currentPassword: string({ error: 'Password is required' })
     .max(72, { error: 'Password must be at most 72 characters' })
     .nonempty(),
 });
 
-const currentPasswordSchema = z.object({
-  currentPassword: z
-    .string({ error: 'Password is required' })
+const currentPasswordSchema = object({
+  currentPassword: string({ error: 'Password is required' })
     .max(72, { error: 'Password must be at most 72 characters' })
     .nonempty(),
 });
 
-router.patch('/me', requireAuth, async (req, res) => {
+usersRouter.patch('/me', requireAuth, async (req, res) => {
   const pool = getPool();
   const { displayName } = validate(profileSchema, req.body);
 
@@ -60,7 +55,7 @@ router.patch('/me', requireAuth, async (req, res) => {
   res.json(toPublicUser(rows[0]));
 });
 
-router.patch('/me/password', requireAuth, sensitiveLimit, async (req, res) => {
+usersRouter.patch('/me/password', requireAuth, sensitiveLimit, async (req, res) => {
   const pool = getPool();
   const { currentPassword, newPassword } = validate(passwordSchema, req.body);
   const isCurrentPasswordValid = await verifyPassword(
@@ -78,7 +73,7 @@ router.patch('/me/password', requireAuth, sensitiveLimit, async (req, res) => {
     throw new HttpError(400, 'New password must be different');
   }
 
-  const passwordHash = await bcrypt.hash(newPassword, 12);
+  const passwordHash = await hash(newPassword, 12);
   const sql = 'UPDATE users SET password_hash = $1 WHERE id = $2';
 
   await pool.query(sql, [passwordHash, req.user.id]);
@@ -87,7 +82,7 @@ router.patch('/me/password', requireAuth, sensitiveLimit, async (req, res) => {
   res.status(204).end();
 });
 
-router.patch('/me/email', requireAuth, sensitiveLimit, async (req, res) => {
+usersRouter.patch('/me/email', requireAuth, sensitiveLimit, async (req, res) => {
   const pool = getPool();
   const { email, currentPassword } = validate(emailSchema, req.body);
   const isPasswordValid = await verifyPassword(req.user.id, currentPassword);
@@ -114,7 +109,7 @@ router.patch('/me/email', requireAuth, sensitiveLimit, async (req, res) => {
   res.json(toPublicUser(user));
 });
 
-router.delete('/me', requireAuth, sensitiveLimit, async (req, res) => {
+usersRouter.delete('/me', requireAuth, sensitiveLimit, async (req, res) => {
   const pool = getPool();
 
   const { currentPassword } = validate(currentPasswordSchema, req.body);
@@ -131,5 +126,3 @@ router.delete('/me', requireAuth, sensitiveLimit, async (req, res) => {
   res.clearCookie('sid', getCookieOptions());
   res.status(204).end();
 });
-
-module.exports = router;

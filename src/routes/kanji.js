@@ -1,19 +1,19 @@
-const express = require('express');
+import { Router } from 'express';
 
-const { getPool } = require('../db');
-const {
+import { getPool } from '../db.js';
+import {
   KANJI_SELECT,
   isValidPositiveNumber,
   getLimit,
   getRandomClause,
   withLimit,
-} = require('../utils/query');
-const { send } = require('../utils/http');
-const { HttpError } = require('../utils/http-error');
+} from '../utils/query.js';
+import { send } from '../utils/http.js';
+import { HttpError } from '../utils/http-error.js';
 
-const router = express.Router();
+export const kanjiRouter = Router();
 
-router.get('/', async (req, res) => {
+kanjiRouter.get('/', async (req, res) => {
   const pool = getPool();
   const where = [];
   const params = [];
@@ -40,7 +40,7 @@ router.get('/', async (req, res) => {
   send(res, rows);
 });
 
-router.get('/:id', async (req, res) => {
+kanjiRouter.get('/:id', async (req, res) => {
   const pool = getPool();
   const id = parseInt(req.params.id);
   const { rows } = await pool.query(
@@ -51,5 +51,3 @@ router.get('/:id', async (req, res) => {
   if (!rows[0]) throw new HttpError(404, 'Not Found');
   send(res, rows);
 });
-
-module.exports = router;

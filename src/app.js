@@ -1,25 +1,24 @@
 // external modules
 
-require('dotenv').config();
+import 'dotenv/config';
 
-const express = require('express');
-const cors = require('cors');
-const cookieParser = require('cookie-parser');
+import express, { json } from 'express';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
 
 // project modules
 
-const authRouter = require('./src/routes/auth');
-const usersRouter = require('./src/routes/users');
-const kanjiRouter = require('./src/routes/kanji');
-const vocabRouter = require('./src/routes/vocab');
-const searchRouter = require('./src/routes/search');
-const lessonsRouter = require('./src/routes/lessons');
-const { HttpError } = require('./src/utils/http-error');
+import { authRouter } from './routes/auth.js';
+import { usersRouter } from './routes/users.js';
+import { kanjiRouter } from './routes/kanji.js';
+import { vocabRouter } from './routes/vocab.js';
+import { searchRouter } from './routes/search.js';
+import { lessonsRouter } from './routes/lessons.js';
+import { HttpError } from './utils/http-error.js';
 
 // app variables
 
-const app = express();
-const port = 4000;
+export const app = express();
 
 // app configuration
 
@@ -28,7 +27,7 @@ const port = 4000;
 app.set('trust proxy', 1);
 
 app.use(cors());
-app.use(express.json());
+app.use(json());
 app.use(cookieParser());
 
 // routes definitions
@@ -97,13 +96,3 @@ app.use((err, req, res, next) => {
   console.error(err);
   res.status(500).json({ error: 'Internal Server Error' });
 });
-
-// server activation
-
-if (require.main === module) {
-  app.listen(port, () => {
-    console.log(`Listening on port ${port}`);
-  });
-}
-
-module.exports = app;

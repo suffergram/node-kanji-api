@@ -2,9 +2,10 @@
   "name": "node-kanji-api",
   "version": "0.0.1",
   "description": "",
-  "main": "index.js",
+  "type": "module",
+  "main": "./src/server.js",
   "scripts": {
-    "dev": "node --watch index.js",
+    "dev": "node --watch ./src/server.js",
     "migrate": "node-pg-migrate -d DATABASE_URL_UNPOOLED"
   },
   "keywords": [],

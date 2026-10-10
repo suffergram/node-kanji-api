@@ -1,4 +1,4 @@
-const getCookieOptions = (session) => {
+export const getCookieOptions = (session) => {
   const options = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -9,8 +9,4 @@ const getCookieOptions = (session) => {
     options.expires = session.expiresAt;
   }
   return options;
-};
-
-module.exports = {
-  getCookieOptions,
 };
