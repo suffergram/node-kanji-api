@@ -9,28 +9,16 @@ const { requireAuth } = require('../middleware/require-auth');
 const { loginLimit, registerLimit } = require('../middleware/auth-limit');
 const { toPublicUser } = require('../utils/user');
 const { validate } = require('../utils/validate');
+const { getCookieOptions } = require('../utils/cookies');
 
 const router = express.Router();
 
-const getCookieOptions = (session) => {
-  const options = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-  };
-  if (session) {
-    options.expires = session.expiresAt;
-  }
-  return options;
-};
-
 const registerSchema = z.object({
-  email: z.email({ error: 'Invalid email address format' }),
+  email: z.email({ error: 'Enter a valid email address' }),
   password: z
-    .string()
+    .string({ error: 'Invalid email or password' })
     .min(8, { error: 'Password must be at least 8 characters' })
-    .max(72, { error: 'Password cannot exceed 72 characters' }),
+    .max(72, { error: 'Password must be at most 72 characters' }),
   displayName: z
     .string({ error: 'Nickname must be a string or null' })
     .trim()
@@ -66,7 +54,7 @@ router.post('/register', registerLimit, async (req, res) => {
     user = rows[0];
   } catch (error) {
     if (error.code === '23505') {
-      throw new HttpError(409, 'Email already registered');
+      throw new HttpError(409, 'This email is already in use');
     }
     throw error;
   }

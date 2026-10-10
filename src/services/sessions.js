@@ -35,8 +35,17 @@ async function deleteSession(sessionId) {
   await pool.query(sql, [sessionId]);
 }
 
+async function deleteOtherSessions(userId, sessionId) {
+  const pool = getPool();
+
+  const sql = 'DELETE FROM sessions WHERE user_id = $1 AND id <> $2';
+
+  await pool.query(sql, [userId, sessionId]);
+}
+
 module.exports = {
   createSession,
   getSessionUser,
   deleteSession,
+  deleteOtherSessions,
 };
