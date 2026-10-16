@@ -24,5 +24,3 @@ export const sensitiveLimit = rateLimit({
   limit: 10,
   skipSuccessfulRequests: true,
 });
-
-

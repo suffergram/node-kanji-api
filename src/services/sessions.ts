@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
 
 import { getPool } from '../db.js';
-import { toPublicUser } from '../utils/user.js';
+import { toPublicUser, type UserRow } from '../utils/user.js';
 
-export async function createSession(userId) {
+export async function createSession(userId: string) {
   const pool = getPool();
 
   const id = randomBytes(32).toString('base64url');
@@ -16,18 +16,18 @@ export async function createSession(userId) {
   return { id, expiresAt };
 }
 
-export async function getSessionUser(sessionId) {
+export async function getSessionUser(sessionId: string) {
   const pool = getPool();
 
   const sql =
     'SELECT users.id, users.email, users.display_name FROM users JOIN sessions ON users.id = sessions.user_id WHERE sessions.id = $1 AND expires_at > now()';
 
-  const { rows } = await pool.query(sql, [sessionId]);
+  const { rows } = await pool.query<UserRow>(sql, [sessionId]);
   const user = rows[0];
   return user ? toPublicUser(user) : null;
 }
 
-export async function deleteSession(sessionId) {
+export async function deleteSession(sessionId: string) {
   const pool = getPool();
 
   const sql = 'DELETE FROM sessions WHERE id = $1';
@@ -35,7 +35,7 @@ export async function deleteSession(sessionId) {
   await pool.query(sql, [sessionId]);
 }
 
-export async function deleteOtherSessions(userId, sessionId) {
+export async function deleteOtherSessions(userId: string, sessionId: string) {
   const pool = getPool();
 
   const sql = 'DELETE FROM sessions WHERE user_id = $1 AND id <> $2';

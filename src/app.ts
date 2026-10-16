@@ -2,7 +2,12 @@
 
 import 'dotenv/config';
 
-import express, { json } from 'express';
+import express, {
+  json,
+  type NextFunction,
+  type Request,
+  type Response,
+} from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
@@ -83,7 +88,7 @@ app.use(() => {
   throw new HttpError(404, 'Not Found');
 });
 
-app.use((err, req, res, next) => {
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   if (err instanceof HttpError) {
     const { status, message } = err;
     res.status(status).json({ error: message });

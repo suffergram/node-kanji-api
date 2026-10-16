@@ -1,26 +1,44 @@
 import { Router } from 'express';
 
 import { getPool } from '../db.js';
-import { KANJI_SELECT, VOCAB_SELECT } from '../utils/query.js';
+import {
+  KANJI_SELECT,
+  VOCAB_SELECT,
+  type KanjiSelect,
+  type VocabSelect,
+} from '../utils/query.js';
 import { send } from '../utils/http.js';
+
+type CountSelect = {
+  count: number;
+};
 
 export const searchRouter = Router();
 
-const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
 
 searchRouter.get('/:query', async (req, res) => {
   const pool = getPool();
   const pattern = `%${String(req.params.query).toLowerCase()}%`;
 
-  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-  const limitKanji = clamp(parseInt(req.query.limitKanji, 10) || 20, 1, 50);
-  const limitVocab = clamp(parseInt(req.query.limitVocab, 10) || 20, 1, 100);
+  const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
+  const limitKanji = clamp(
+    parseInt(String(req.query.limitKanji), 10) || 20,
+    1,
+    50
+  );
+  const limitVocab = clamp(
+    parseInt(String(req.query.limitVocab), 10) || 20,
+    1,
+    100
+  );
   const offsetKanji = (page - 1) * limitKanji;
   const offsetVocab = (page - 1) * limitVocab;
 
   const {
     rows: [{ count: kanjiTotal }],
-  } = await pool.query(
+  } = await pool.query<CountSelect>(
     `SELECT COUNT(*)::int AS count FROM kanji
        WHERE kanji ILIKE $1
           OR meaning ILIKE $1
@@ -31,7 +49,7 @@ searchRouter.get('/:query', async (req, res) => {
 
   const {
     rows: [{ count: vocabTotal }],
-  } = await pool.query(
+  } = await pool.query<CountSelect>(
     `SELECT COUNT(*)::int AS count FROM vocab
        WHERE kanji ILIKE $1
           OR kana ILIKE $1
@@ -40,7 +58,7 @@ searchRouter.get('/:query', async (req, res) => {
     [pattern]
   );
 
-  const { rows: kanjiRows } = await pool.query(
+  const { rows: kanjiRows } = await pool.query<KanjiSelect>(
     `SELECT ${KANJI_SELECT} FROM kanji
        WHERE kanji ILIKE $1
           OR meaning ILIKE $1
@@ -53,14 +71,14 @@ searchRouter.get('/:query', async (req, res) => {
 
   const kanjiItems = [];
   for (const item of kanjiRows) {
-    const { rows: ref } = await pool.query(
+    const { rows: ref } = await pool.query<VocabSelect>(
       `SELECT ${VOCAB_SELECT} FROM vocab WHERE kanji ILIKE $1 LIMIT 20`,
       [`%${item.kanji}%`]
     );
     kanjiItems.push({ ...item, ref });
   }
 
-  const { rows: vocabItems } = await pool.query(
+  const { rows: vocabItems } = await pool.query<VocabSelect>(
     `SELECT ${VOCAB_SELECT} FROM vocab
        WHERE kanji ILIKE $1
           OR kana ILIKE $1

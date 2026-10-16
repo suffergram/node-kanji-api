@@ -7,6 +7,7 @@ import {
   getLimit,
   getRandomClause,
   withLimit,
+  type KanjiSelect,
 } from '../utils/query.js';
 import { send } from '../utils/http.js';
 import { HttpError } from '../utils/http-error.js';
@@ -18,7 +19,7 @@ kanjiRouter.get('/', async (req, res) => {
   const where = [];
   const params = [];
 
-  if (isValidPositiveNumber(req.query.jlpt)) {
+  if (isValidPositiveNumber(String(req.query.jlpt))) {
     params.push(Number(req.query.jlpt));
     where.push(`jlpt >= $${params.length}`);
   }
@@ -36,14 +37,14 @@ kanjiRouter.get('/', async (req, res) => {
   sql += getRandomClause(req);
   sql = withLimit(sql, params, getLimit(req));
 
-  const { rows } = await pool.query(sql, params);
+  const { rows } = await pool.query<KanjiSelect>(sql, params);
   send(res, rows);
 });
 
 kanjiRouter.get('/:id', async (req, res) => {
   const pool = getPool();
   const id = parseInt(req.params.id);
-  const { rows } = await pool.query(
+  const { rows } = await pool.query<KanjiSelect>(
     `SELECT ${KANJI_SELECT} FROM kanji WHERE id = $1 LIMIT 1`,
     [id]
   );

@@ -1,21 +1,25 @@
-import { KANJI_DIFF, KANA_DIFF } from '../constants/constants.js';
+import type { Pool } from 'pg';
 
-const KANJI_SELECT =
-  'id, jlpt, kanji, romaji_on AS "romajiOn", on_reading AS "on", romaji_kun AS "romajiKun", kun_reading AS "kun", meaning';
-const VOCAB_SELECT = 'id, jlpt, kanji, meaning, kana, romaji';
+import { KANJI_DIFF, KANA_DIFF } from '../constants/constants.js';
+import {
+  KANJI_SELECT,
+  type KanjiSelect,
+  type VocabSelect,
+} from '../utils/query.js';
 
 // Build `amount` answer options for every vocab item using only TWO queries:
 //   1) one query fetches all kanji characters used across the questions;
 //   2) one query (CROSS JOIN LATERAL) fetches options for all questions at once.
-export async function getOptions(pool, items, amount = 4) {
+export async function getOptions(pool: Pool, items: VocabSelect[], amount = 4) {
   const need = amount - 1;
   if (!items.length) return [];
 
   // All unique kanji characters across every question.
   const allChars = [...new Set(items.flatMap((item) => item.kanji.split('')))];
-  const { rows: allKanji } = await pool.query(KANJI_SELECT_FOR_CHARS, [
-    allChars,
-  ]);
+  const { rows: allKanji } = await pool.query<KanjiSelect>(
+    KANJI_SELECT_FOR_CHARS,
+    [allChars]
+  );
 
   // One query: for each question (row from unnest), a LATERAL subquery picks
   // its random options. Returns rows tagged with the question id.
