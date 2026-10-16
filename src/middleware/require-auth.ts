@@ -1,7 +1,12 @@
+import type { NextFunction, Request, Response } from 'express';
 import { getSessionUser } from '../services/sessions.js';
 import { HttpError } from '../utils/http-error.js';
 
-export async function requireAuth(req, res, next) {
+export async function requireAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   const { cookies } = req;
 
   if (!cookies.sid) {

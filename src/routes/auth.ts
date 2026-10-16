@@ -1,15 +1,20 @@
 import { Router } from 'express';
 import { object, email as _email, string } from 'zod';
 import { hash, compare } from 'bcryptjs';
+import { DatabaseError } from 'pg';
 
 import { HttpError } from '../utils/http-error.js';
 import { getPool } from '../db.js';
 import { createSession, deleteSession } from '../services/sessions.js';
 import { requireAuth } from '../middleware/require-auth.js';
 import { loginLimit, registerLimit } from '../middleware/auth-limit.js';
-import { toPublicUser } from '../utils/user.js';
+import { toPublicUser, type UserRow } from '../utils/user.js';
 import { validate } from '../utils/validate.js';
 import { getCookieOptions } from '../utils/cookies.js';
+
+type UserCredSelect = UserRow & {
+  password_hash: string;
+};
 
 export const authRouter = Router();
 
@@ -43,14 +48,14 @@ authRouter.post('/register', registerLimit, async (req, res) => {
   const sql = `INSERT INTO users(email, password_hash, display_name) VALUES ($1,$2,$3) RETURNING id, email, display_name`;
   let user;
   try {
-    const { rows } = await pool.query(sql, [
+    const { rows } = await pool.query<UserRow>(sql, [
       email.toLowerCase(),
       passwordHash,
       displayName ?? null,
     ]);
     user = rows[0];
   } catch (error) {
-    if (error.code === '23505') {
+    if (error instanceof DatabaseError && error.code === '23505') {
       throw new HttpError(409, 'This email is already in use');
     }
     throw error;
@@ -70,7 +75,7 @@ authRouter.post('/login', loginLimit, async (req, res) => {
   const sql =
     'SELECT id, email, password_hash, display_name FROM users WHERE email = $1';
 
-  const { rows } = await pool.query(sql, [email.toLowerCase()]);
+  const { rows } = await pool.query<UserCredSelect>(sql, [email.toLowerCase()]);
   const user = rows[0];
 
   if (!user) {

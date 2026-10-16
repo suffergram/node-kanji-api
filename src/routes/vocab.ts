@@ -8,6 +8,7 @@ import {
   getLimit,
   getRandomClause,
   withLimit,
+  VocabSelect,
 } from '../utils/query.js';
 import { send } from '../utils/http.js';
 import { HttpError } from '../utils/http-error.js';
@@ -19,7 +20,7 @@ vocabRouter.get('/', async (req, res) => {
   const where = [];
   const params = [];
 
-  if (isValidPositiveNumber(req.query.jlpt)) {
+  if (isValidPositiveNumber(String(req.query.jlpt))) {
     params.push(Number(req.query.jlpt));
     where.push(`jlpt >= $${params.length}`);
   }
@@ -42,7 +43,7 @@ vocabRouter.get('/', async (req, res) => {
     }
   }
 
-  if (isValidPositiveNumber(req.query.kanjiJlpt)) {
+  if (isValidPositiveNumber(String(req.query.kanjiJlpt))) {
     const jlpt = Number(req.query.kanjiJlpt);
     params.push(jlpt);
     where.push(`NOT EXISTS (
@@ -61,16 +62,17 @@ vocabRouter.get('/', async (req, res) => {
   sql += getRandomClause(req);
   sql = withLimit(sql, params, getLimit(req));
 
-  let content = (await pool.query(sql, params)).rows;
+  const { rows } = await pool.query<VocabSelect>(sql, params);
 
   if (
-    isValidPositiveNumber(req.query.options) &&
+    isValidPositiveNumber(String(req.query.options)) &&
     Number(req.query.options) > 1
   ) {
-    content = await getOptions(pool, content, Number(req.query.options));
+    send(res, await getOptions(pool, rows, Number(req.query.options)));
+    return;
   }
 
-  send(res, content);
+  send(res, rows);
 });
 
 vocabRouter.get('/:id', async (req, res) => {

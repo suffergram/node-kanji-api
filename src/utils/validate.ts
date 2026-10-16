@@ -1,6 +1,10 @@
+import z from 'zod';
 import { HttpError } from './http-error.js';
 
-export function validate(schema, data) {
+export function validate<T extends z.ZodType>(
+  schema: T,
+  data: unknown
+): z.infer<T> {
   const parsed = schema.safeParse(data);
   if (!parsed.success) {
     throw new HttpError(400, parsed.error.issues[0].message);

@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { object, string, email as _email } from 'zod';
 import { hash } from 'bcryptjs';
+import { DatabaseError } from 'pg';
 
 import { getPool } from '../db.js';
-import { toPublicUser } from '../utils/user.js';
+import { toPublicUser, type UserRow } from '../utils/user.js';
 import { requireAuth } from '../middleware/require-auth.js';
 import { validate } from '../utils/validate.js';
 import { HttpError } from '../utils/http-error.js';
@@ -11,6 +12,7 @@ import { deleteOtherSessions } from '../services/sessions.js';
 import { sensitiveLimit } from '../middleware/auth-limit.js';
 import { verifyPassword } from '../utils/verify-password.js';
 import { getCookieOptions } from '../utils/cookies.js';
+import { getAuthUser } from '../utils/get-auth-user.js';
 
 export const usersRouter = Router();
 
@@ -45,75 +47,92 @@ const currentPasswordSchema = object({
 });
 
 usersRouter.patch('/me', requireAuth, async (req, res) => {
+  const user = getAuthUser(req);
   const pool = getPool();
   const { displayName } = validate(profileSchema, req.body);
 
   const sql =
     'UPDATE users SET display_name = $1 WHERE id = $2 RETURNING id, email, display_name';
 
-  const { rows } = await pool.query(sql, [displayName, req.user.id]);
+  const { rows } = await pool.query<UserRow>(sql, [displayName, user.id]);
   res.json(toPublicUser(rows[0]));
 });
 
-usersRouter.patch('/me/password', requireAuth, sensitiveLimit, async (req, res) => {
-  const pool = getPool();
-  const { currentPassword, newPassword } = validate(passwordSchema, req.body);
-  const isCurrentPasswordValid = await verifyPassword(
-    req.user.id,
-    currentPassword
-  );
+usersRouter.patch(
+  '/me/password',
+  requireAuth,
+  sensitiveLimit,
+  async (req, res) => {
+    const user = getAuthUser(req);
+    const pool = getPool();
+    const { currentPassword, newPassword } = validate(passwordSchema, req.body);
+    const isCurrentPasswordValid = await verifyPassword(
+      user.id,
+      currentPassword
+    );
 
-  if (!isCurrentPasswordValid) {
-    throw new HttpError(403, 'Current password is incorrect');
-  }
-
-  const isNewPasswordValid = await verifyPassword(req.user.id, newPassword);
-
-  if (isNewPasswordValid) {
-    throw new HttpError(400, 'New password must be different');
-  }
-
-  const passwordHash = await hash(newPassword, 12);
-  const sql = 'UPDATE users SET password_hash = $1 WHERE id = $2';
-
-  await pool.query(sql, [passwordHash, req.user.id]);
-  await deleteOtherSessions(req.user.id, req.cookies.sid);
-
-  res.status(204).end();
-});
-
-usersRouter.patch('/me/email', requireAuth, sensitiveLimit, async (req, res) => {
-  const pool = getPool();
-  const { email, currentPassword } = validate(emailSchema, req.body);
-  const isPasswordValid = await verifyPassword(req.user.id, currentPassword);
-
-  if (!isPasswordValid) {
-    throw new HttpError(403, 'Current password is incorrect');
-  }
-
-  const sql =
-    'UPDATE users SET email = $1 WHERE id = $2 RETURNING id, email, display_name';
-
-  let user;
-  try {
-    const { rows } = await pool.query(sql, [email.toLowerCase(), req.user.id]);
-    user = rows[0];
-  } catch (error) {
-    if (error.code === '23505') {
-      throw new HttpError(409, 'This email is already in use');
+    if (!isCurrentPasswordValid) {
+      throw new HttpError(403, 'Current password is incorrect');
     }
-    throw error;
-  }
 
-  await deleteOtherSessions(req.user.id, req.cookies.sid);
-  res.json(toPublicUser(user));
-});
+    const isNewPasswordValid = await verifyPassword(user.id, newPassword);
+
+    if (isNewPasswordValid) {
+      throw new HttpError(400, 'New password must be different');
+    }
+
+    const passwordHash = await hash(newPassword, 12);
+    const sql = 'UPDATE users SET password_hash = $1 WHERE id = $2';
+
+    await pool.query(sql, [passwordHash, user.id]);
+    await deleteOtherSessions(user.id, req.cookies.sid);
+
+    res.status(204).end();
+  }
+);
+
+usersRouter.patch(
+  '/me/email',
+  requireAuth,
+  sensitiveLimit,
+  async (req, res) => {
+    const user = getAuthUser(req);
+    const pool = getPool();
+    const { email, currentPassword } = validate(emailSchema, req.body);
+    const isPasswordValid = await verifyPassword(user.id, currentPassword);
+
+    if (!isPasswordValid) {
+      throw new HttpError(403, 'Current password is incorrect');
+    }
+
+    const sql =
+      'UPDATE users SET email = $1 WHERE id = $2 RETURNING id, email, display_name';
+
+    let userRow;
+    try {
+      const { rows } = await pool.query<UserRow>(sql, [
+        email.toLowerCase(),
+        user.id,
+      ]);
+      userRow = rows[0];
+    } catch (error) {
+      if (error instanceof DatabaseError && error.code === '23505') {
+        throw new HttpError(409, 'This email is already in use');
+      }
+      throw error;
+    }
+
+    await deleteOtherSessions(user.id, req.cookies.sid);
+    res.json(toPublicUser(userRow));
+  }
+);
 
 usersRouter.delete('/me', requireAuth, sensitiveLimit, async (req, res) => {
+  const user = getAuthUser(req);
   const pool = getPool();
 
   const { currentPassword } = validate(currentPasswordSchema, req.body);
-  const isPasswordValid = await verifyPassword(req.user.id, currentPassword);
+  const isPasswordValid = await verifyPassword(user.id, currentPassword);
 
   if (!isPasswordValid) {
     throw new HttpError(403, 'Current password is incorrect');
@@ -121,7 +140,7 @@ usersRouter.delete('/me', requireAuth, sensitiveLimit, async (req, res) => {
 
   const sql = 'DELETE FROM users WHERE id = $1';
 
-  await pool.query(sql, [req.user.id]);
+  await pool.query(sql, [user.id]);
 
   res.clearCookie('sid', getCookieOptions());
   res.status(204).end();
