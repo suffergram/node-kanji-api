@@ -45,7 +45,7 @@ authRouter.post('/register', registerLimit, async (req, res) => {
 
   const passwordHash = await hash(password, 12);
 
-  const sql = `INSERT INTO users(email, password_hash, display_name) VALUES ($1,$2,$3) RETURNING id, email, display_name`;
+  const sql = `INSERT INTO users(email, password_hash, display_name) VALUES ($1,$2,$3) RETURNING id, email, display_name, avatar_updated_at`;
   let user;
   try {
     const { rows } = await pool.query<UserRow>(sql, [
@@ -73,7 +73,7 @@ authRouter.post('/login', loginLimit, async (req, res) => {
   const { email, password } = validate(loginSchema, req.body);
 
   const sql =
-    'SELECT id, email, password_hash, display_name FROM users WHERE email = $1';
+    'SELECT id, email, password_hash, display_name, avatar_updated_at FROM users WHERE email = $1';
 
   const { rows } = await pool.query<UserCredSelect>(sql, [email.toLowerCase()]);
   const user = rows[0];

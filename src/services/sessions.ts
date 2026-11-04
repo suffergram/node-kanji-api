@@ -20,7 +20,7 @@ export async function getSessionUser(sessionId: string) {
   const pool = getPool();
 
   const sql =
-    'SELECT users.id, users.email, users.display_name FROM users JOIN sessions ON users.id = sessions.user_id WHERE sessions.id = $1 AND expires_at > now()';
+    'SELECT users.id, users.email, users.display_name, users.avatar_updated_at FROM users JOIN sessions ON users.id = sessions.user_id WHERE sessions.id = $1 AND expires_at > now()';
 
   const { rows } = await pool.query<UserRow>(sql, [sessionId]);
   const user = rows[0];

@@ -98,6 +98,10 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     res.status(400).json({ error: 'Invalid JSON' });
     return;
   }
+  if (err.type === 'entity.too.large') {
+    res.status(413).json({ error: 'Image is too large' });
+    return;
+  }
   console.error(err);
   res.status(500).json({ error: 'Internal Server Error' });
 });
