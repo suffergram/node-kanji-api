@@ -1,0 +1,21 @@
+{
+  "slug": "pilot-nature",
+  "title": "Mountains and fire",
+  "items": [
+    {
+      "vocabId": 507,
+      "targetMeaning": "mountain",
+      "note": "山 means mountain. As a word on its own, it is read やま."
+    },
+    {
+      "vocabId": 609,
+      "targetMeaning": "fire",
+      "note": "火 means fire. As a word on its own, it is read ひ."
+    },
+    {
+      "vocabId": 1322,
+      "targetMeaning": "volcano",
+      "note": "火 means fire and 山 means mountain. Together, 火山 means volcano and is read かざん. Learn this reading with the whole word."
+    }
+  ]
+}

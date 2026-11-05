@@ -1,0 +1,1 @@
+INSERT INTO vocab (id, jlpt, kanji, meaning, kana, romaji) VALUES (1322, NULL, '火山', 'volcano', 'かざん', 'kazan') ON CONFLICT (id) DO NOTHING;
